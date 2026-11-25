@@ -29,3 +29,13 @@ synthetic tests. **These revisions are not byte-identical to the original server
 script copies.** Historical PASS/REVIEW/EXCLUDE and the strict ClinVar PASS lists
 were independently reproduced using saved audit tables. The refreshed
 reference-normalized workflow is not yet run end to end on the lab server.
+
+## Historical intermediate audit generator
+
+- Original server package: `JointCall_Configured_Local_gnomAD_20261110/one_run_jointcall_finalizer.py`
+- Public copy: `scripts/03_local_annotation/historical_audit/one_run_jointcall_finalizer.py`
+- Original source SHA-256: `03353a64c9339f9a956599042a37330666a7e0c9de0c49db2904dee20004ec11`
+- Changes: removed hardcoded private paths and generated email text; preserved audit calculations and historical filtering rules.
+- Output: `ALL_14124_COMPLETE_AUDIT.tsv`. The local v4.1 stage subsequently reclassifies it.
+
+The detailed audit, genotype data, and final variant/gene tables remain on the analysis server.

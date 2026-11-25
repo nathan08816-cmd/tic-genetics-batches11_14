@@ -23,6 +23,10 @@ Joint-called VCF + pedigrees
 | Additional | `scripts/06_trio_validation/`, `scripts/07_gene_analysis_historical/` | Trio and exploratory gene reviews |
 | Diagnostics | `scripts/08_diagnostics/` | Aggregate frequency/ClinVar QC checks |
 
+## Historical audit generator
+
+`scripts/03_local_annotation/historical_audit/one_run_jointcall_finalizer.py` creates the comprehensive intermediate audit used by the later gnomAD v4.1 finalizer. This historical script uses earlier API/ANNOVAR frequency checks; **its candidate classifications are superseded by Stage 04**. Source genetic data and detailed candidate tables remain on the lab server.
+
 ## Main parameters
 
 - Site `FILTER=PASS`; SNP VQSLOD ≥ −3.4427, indel VQSLOD ≥ 2.4465; capture interval ±20 bp.

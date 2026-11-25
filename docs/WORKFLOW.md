@@ -11,6 +11,15 @@ Commands below describe the executed approach. Set all paths to their lab-local 
 | 5. Final filtering | QC audit, evidence, genotype VCF | AF, quality, region and carrier filters | 5,067 PASS / 1,324 REVIEW / 7,733 EXCLUDE |
 | 6. ClinVar shortlist | Final audit and family events | Exact Pathogenic/ Likely_pathogenic labels | 331 variants / 304 genes |
 
+The historical intermediate audit (`ALL_14124_COMPLETE_AUDIT.tsv`) was generated with
+`scripts/03_local_annotation/historical_audit/one_run_jointcall_finalizer.py` using the merged variant table, ANNOVAR records, genotype VCF,
+phenotype and sample QC files, family events, and gnomAD/local-flag evidence.
+Its original filtering decisions are **not** the final v4.1 results.
+The original source paths are recorded in `docs/PATHS.md`.
+
+Use `python3 scripts/03_local_annotation/historical_audit/one_run_jointcall_finalizer.py --help` for input flags. The script requires
+lab-local data and is not invoked by `workflow.sh`.
+
 ## Commands
 
 ```bash
