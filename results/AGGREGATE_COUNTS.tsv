@@ -1,0 +1,16 @@
+Metric	Count
+Individuals	1245
+Families	659
+Affected_individuals	699
+Unaffected_individuals	534
+Unknown_phenotype_individuals	12
+LoF_or_coding_splicing_variants	14124
+Local_v41_PASS_variants	5067
+Local_v41_REVIEW_variants	1324
+Local_v41_EXCLUDE_variants	7733
+Local_v41_PASS_genes	3829
+ClinVar_exact_Pathogenic_PASS_variants	222
+ClinVar_exact_Likely_pathogenic_PASS_variants	109
+ClinVar_exact_P_or_LP_PASS_variants	331
+ClinVar_exact_P_or_LP_PASS_genes	304
+ClinVar_combined_label_additional_variants	189
