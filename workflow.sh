@@ -6,7 +6,7 @@ help() { cat <<'USAGE'
 Usage:
   bash workflow.sh --show       List all stages and report their scope
   bash workflow.sh --check      Verify required paths from config/paths.env
-  bash workflow.sh --clinvar    Run only the current ClinVar P/LP extraction (requires --check)
+  bash workflow.sh --clinvar    Write PASS P/LP shortlist plus a separate P/LP REVIEW table
   bash workflow.sh --help
 
 No automatic full pipeline run. Historic scripts require human review and
@@ -52,7 +52,7 @@ case "${1:---help}" in
   --clinvar)
     load_config;check_clinvar
     python3 "$REPO/scripts/05_clinvar_priority/filter_clinvar_plp_pass.py" \
-      --audit "$FINAL_V41_AUDIT" --events "$FAMILY_EVENTS" --outdir "$CLINVAR_OUTDIR"
+      --audit "$FINAL_V41_AUDIT" --events "$FAMILY_EVENTS" --outdir "$CLINVAR_OUTDIR" --include-review
     ;;
   *) help;exit 2;;
 esac

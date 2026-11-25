@@ -53,7 +53,9 @@ def main():
         freqs={k:positivefloat(value(info,k)) for k in keys}
         valid=[x for x in freqs.values() if x is not None]
         af=max(valid) if valid else None
-        if an<=0 or af is None:
+        if f=='AC0':
+            status='UNRESOLVED';detail='AC0: no QC-passing ALT evidence; review'
+        elif an<=0 or af is None:
             status='UNRESOLVED';detail='NO_GNOMAD_RECORD' if an<0 else 'NO_VALID_FREQUENCY'
         elif f=='PASS':
             status='EXCLUDE_AF' if af>=.001 else 'PASS';detail='gnomad_filter=PASS'

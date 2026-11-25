@@ -112,7 +112,9 @@ def parse_sample(format_fields, raw):
     elif nalt == len(alleles):
         good = ab >= 0.8 and ads[1] >= 4
         result['QC_call'] = 'ALT' if good else 'NO_CALL'
-        result['QC_note'] = 'Confident hom-alt' if good else 'Hom-alt read balance/ALT reads failed'
+        result['QC_note'] = ('Haploid ALT: verify sex-specific ploidy' if good and len(alleles)==1
+                             else 'Confident hom-alt' if good
+                             else 'Hom-alt read balance/ALT reads failed')
     elif nalt == 1:
         good = ads[1] >= 4 and 0.25 <= ab <= 0.75
         result['QC_call'] = 'ALT' if good else 'NO_CALL'
@@ -120,6 +122,19 @@ def parse_sample(format_fields, raw):
     else:
         result['QC_note'] = 'Unexpected genotype'
     return result
+
+
+def parent_reference_warnings(role, call):
+    """QC-REF is not enough to call a site de novo if parental ALT reads exist."""
+    if role == 'affected_child' or call['QC_call'] != 'REF':
+        return []
+    try:
+        alt_reads = int(str(call['AD']).split(',')[1])
+    except (IndexError, TypeError, ValueError):
+        return [f'{role}: reference AD unavailable; check original VCF']
+    if alt_reads > 0:
+        return [f'{role}: {alt_reads} ALT-supporting read(s) despite REF genotype; review potential mosaicism/artifact']
+    return []
 
 
 def main():
@@ -186,6 +201,11 @@ def main():
             for field in ['GT','AD','DP','GQ','AB']:
                 out[f'{prefix}_{field}']=call[field]
             if call['QC_call']=='NO_CALL': warnings.append(f'{role}: {call["QC_note"]}')
+            # A QC-REF parent may still have ALT reads under the 5% threshold.
+            # Treat those as manual-review triggers for de novo analysis.
+            if len(re.split(r'[|/]', str(call['GT']))) != 2 and call['QC_call'] != 'NO_CALL':
+                warnings.append(f'{role}: haploid/non-diploid genotype; verify ploidy and sex chromosome')
+            warnings.extend(parent_reference_warnings(role, call))
         if record[6]!='PASS':warnings.append('VCF FILTER is not PASS')
         if statuses!=['ALT','REF','REF']:
             warnings.append(f'Not ALT/REF/REF after genotype QC: {statuses}')

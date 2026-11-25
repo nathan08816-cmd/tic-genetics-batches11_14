@@ -19,3 +19,13 @@ Source script checksums before portability/privacy adjustments. File paths are r
 Portability edits: path defaults, nonessential names, generated email text, and private trio sample identifiers. The gnomAD v4.1 candidate decision function was not intentionally modified. **End-to-end equivalence has not been confirmed on the server.**
 
 The original `family_analysis_td_updated_20261009.py` remains lab-only because it includes individual family identifiers and case notes; its logic is not replaced by this repository. The ClinVar shortlist script came from the separately retained analysis package and needs a confirmed server run/location.
+
+## Post-source code audit
+
+Revisions made after inspecting the reference source: comma/semicolon/pipe gene splitting,
+separate ClinVar P/LP REVIEW output, cautious `AC0` handling, parental ALT-read
+review warnings, future reference-normalized indel preparation, and additional
+synthetic tests. **These revisions are not byte-identical to the original server
+script copies.** Historical PASS/REVIEW/EXCLUDE and the strict ClinVar PASS lists
+were independently reproduced using saved audit tables. The refreshed
+reference-normalized workflow is not yet run end to end on the lab server.

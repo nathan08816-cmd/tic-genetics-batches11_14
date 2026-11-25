@@ -8,6 +8,7 @@ Python 3.9+, standard library only.
 import argparse
 import csv
 import gzip
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -39,7 +40,8 @@ def read_tsv(path):
 
 
 def split_genes(s):
-    return sorted({g.strip() for g in s.split(';') if g.strip() not in ('', '.', 'NA')})
+    return sorted({g.strip() for g in re.split(r'[;,|]', s or '')
+                   if g.strip() not in ('', '.', 'NA')})
 
 
 def label(row):
@@ -58,6 +60,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--audit', type=Path, required=True,
                         help='Completed ALL_14124_LOCAL_V41_REASSESSED_AUDIT.tsv')
+    parser.add_argument('--include-review', action='store_true',
+                        help='Write a SEPARATE P/LP REVIEW table; never promote REVIEW to PASS')
     parser.add_argument('--events', type=Path, required=True,
                         help='Existing all_family_carrier_events.tsv.gz')
     parser.add_argument('--outdir', type=Path, required=True,
@@ -82,11 +86,17 @@ def main():
     if not all_pass:
         raise ValueError('No PASS rows in audit')
     primary = [r for r in all_pass if label(r) in PRIMARY]
+    review = []
+    if args.include_review:
+        review = [r for r in read_tsv(args.audit)
+                  if r['Filter_Status'] == 'REVIEW' and label(r) in PRIMARY]
     combined = [r for r in all_pass if label(r) == COMBINED]
     if not primary:
         raise ValueError('No exact ClinVar Pathogenic or Likely_pathogenic rows')
 
-    selected_ids = {r['Variant_ID'] for r in primary}
+    selected_ids = {r['Variant_ID'] for r in primary + review}
+    if len(selected_ids) != len(primary) + len(review):
+        raise ValueError('Repeated P/LP Variant_ID across PASS/REVIEW')
     fam_by_vid = defaultdict(set)
     affected_by_vid = Counter()
     for e in read_tsv(args.events):
@@ -99,7 +109,7 @@ def main():
                 raise ValueError('Missing Family_ID for '+vid)
             fam_by_vid[vid].add(e['Family_ID'])
             affected_by_vid[vid] += n
-    for r in primary:
+    for r in primary + review:
         vid = r['Variant_ID']
         if affected_by_vid[vid] != int(r['Affected_Carriers']):
             raise ValueError('Affected-carrier mismatch for '+vid)
@@ -116,6 +126,11 @@ def main():
     args.outdir.mkdir(parents=True, exist_ok=True)
     write_tsv(args.outdir/'ClinVar_P_or_LP_PASS_Variants.tsv', VARIANT_COLUMNS, primary_out)
     write_tsv(args.outdir/'ClinVar_Combined_PLP_PASS_Additional.tsv', VARIANT_COLUMNS, combined_out)
+    if args.include_review:
+        review_fields = VARIANT_COLUMNS + ['Filter_Reason', 'Local_gnomAD_Filter',
+                                           'Local_LCR', 'Local_SegDup']
+        write_tsv(args.outdir/'ClinVar_P_or_LP_REVIEW_Variants.tsv', review_fields,
+                  [var_record(r) for r in review])
 
     # Do not mislabel sums of per-allele carrier counts as unique persons.
     genes = defaultdict(lambda: {'ids': set(), 'p': 0, 'lp': 0,
@@ -176,10 +191,18 @@ UNION including combined label: {len(primary)+len(combined)} variants in {len(al
 PRIMARY selections require exact ClinVar classification of 'Pathogenic' or 'Likely_pathogenic', an exact-allele ClinVar vcfanno match, and Filter_Status=PASS.
 Excluded from primary: Pathogenic/Likely_pathogenic combined label (supplied separately), conflicting interpretations, VUS, benign, not annotated, RECORD/no-significance, Pathogenic|Affects, and all REVIEW/EXCLUDE variants.
 
-Interpretation: ClinVar disease classifications may concern disorders OTHER THAN Tourette. PASS means passing the upstream computational filters, not gene-disease validation. Gene tables split semicolon-delimited RefGene symbols, dedupe repeated symbols, and count unique affected FAMILIES across selected variants. 'Affected_Variant_Carrier_Observations' sums variant-level carrier counts; it is NOT the number of unique people per gene (requires joint VCF genotypes to compute).
+Interpretation: ClinVar disease classifications may concern disorders OTHER THAN Tourette. PASS means passing the upstream computational filters, not gene-disease validation. Gene tables split comma/semicolon/pipe-delimited RefGene symbols, dedupe repeated symbols, and count unique affected FAMILIES across selected variants. 'Affected_Variant_Carrier_Observations' sums variant-level carrier counts; it is NOT the number of unique people per gene (requires joint VCF genotypes to compute).
 
 No BAM/CRAM read review, reannotation, or new ClinVar query was performed during this extraction. The labels reflect the saved local ClinVar snapshot.
 '''
+    if args.include_review:
+        review_genes = {g for r in review for g in split_genes(r['Gene'])}
+        pass_review_genes = set(genes) | review_genes
+        note += (f'ADDITIONAL exact P/LP REVIEW (not PASS): {len(review)} variants in '
+                 f'{len(review_genes)} genes.\n'
+                 f'PASS+REVIEW union: {len(primary)+len(review)} P/LP variants in '
+                 f'{len(pass_review_genes)} genes.\n'
+                 'REVIEW requires independent investigation before promotion to PASS.\n')
     (args.outdir/'CLINVAR_SELECTION_SUMMARY.txt').write_text(note, encoding='utf-8')
     print(note)
     print('OUTPUT DIRECTORY:', args.outdir)

@@ -30,6 +30,8 @@ count() { bcftools view -H "$1" | wc -l; }
 
 if [[ "$MODE" == qc ]]; then
   need "$EXTRACT"
+  : "${REFERENCE_FASTA:?Set REFERENCE_FASTA to the exact GRCh38 FASTA used for joint calling before reprocessing}"
+  need "$REFERENCE_FASTA"
   need "$DATA/filtering/vqsr_only.sites.vcf.gz"
   need "$DATA/filtering/vqsr_only.sites.vcf.gz.tbi"
   command -v bcftools >/dev/null
@@ -47,8 +49,8 @@ if [[ "$MODE" == qc ]]; then
   echo "[2/3] Intersection with Yale's original FILTER=PASS for conservative main analysis."
   bcftools view -f PASS "$VQ" -Oz -o "$STRICT"
   bcftools index -t "$STRICT"
-  echo "[3/3] Split multiallelic calls into ALT-specific records. No reference normalization."
-  bcftools norm -m -any "$STRICT" -Oz -o "$NORM"
+  echo "[3/3] Split multiallelic calls and left-normalize against the verified GRCh38 reference."
+  bcftools norm --check-ref e --fasta-ref "$REFERENCE_FASTA" -m -any "$STRICT" -Oz -o "$NORM"
   bcftools index -t "$NORM"
   echo "==== VALIDATION / COUNTS ===="
   for f in "$EXTRACT" "$VQ" "$STRICT" "$NORM"; do

@@ -90,12 +90,13 @@ def local_assessment(r,allele):
         raise ValueError(f'{allele}: max AF does not match extracted summary: {af} vs {recorded}')
     an=integer(r.get('Local_gnomAD_AN'),allele+':AN')
     filt=r.get('Local_gnomAD_Filter','').strip()
-    if an<=0 or af is None: outcome='UNOBSERVED'
+    if filt=='AC0':outcome='AC0_REVIEW'
+    elif an<=0 or af is None: outcome='UNOBSERVED'
     elif filt in ('','.','MISSING','UNKNOWN'):outcome='UNRESOLVED_FILTER'
     elif filt!='PASS':outcome='FLAGGED'
     elif af>=CUTOFF:outcome='EXCLUDE_AF'
     else:outcome='PASS'
-    mapped={'UNOBSERVED':'UNRESOLVED','UNRESOLVED_FILTER':'UNRESOLVED',
+    mapped={'UNOBSERVED':'UNRESOLVED','AC0_REVIEW':'UNRESOLVED','UNRESOLVED_FILTER':'UNRESOLVED',
             'FLAGGED':'FLAGGED','EXCLUDE_AF':'EXCLUDE_AF','PASS':'PASS'}[outcome]
     if mapped!=r.get('Flag_Assessment'):
         raise ValueError(f'{allele}: contradictory saved Flag_Assessment {r.get("Flag_Assessment")!r} vs computed {outcome}')
@@ -136,6 +137,7 @@ def reconstruct(audit, local):
         elif outcome=='FLAGGED':reasons.append('gnomAD v4.1 FILTER='+filter_text)
         elif outcome=='UNOBSERVED':reasons.append('Absent/unmatched in local gnomAD v4.1; no positive frequency evidence')
         elif outcome=='UNRESOLVED_FILTER':reasons.append('Missing local gnomAD quality filter')
+        elif outcome=='AC0_REVIEW':reasons.append('gnomAD AC0: no QC-passing ALT observations; review before inclusion')
         if affected<=0 or internal is None or (internal is not None and internal>INTERNAL) or outcome in ('EXCLUDE_AF','FLAGGED'):
             status='EXCLUDE'
         else:
@@ -146,7 +148,7 @@ def reconstruct(audit, local):
         if status=='PASS':reasons=['Local gnomAD v4.1, internal AF and QC passed']
         line={
            'Variant_ID':key,'Gene':r['Gene'],'Function':r['Function'],
-           'gnomAD_AF':fmt(af),'gnomAD_QC':('PASS' if outcome in ('PASS','EXCLUDE_AF') else filter_text if outcome=='FLAGGED' else 'UNRESOLVED'),
+           'gnomAD_AF':fmt(af),'gnomAD_QC':('PASS' if outcome in ('PASS','EXCLUDE_AF') else filter_text if outcome in ('FLAGGED','AC0_REVIEW') else 'UNRESOLVED'),
            'Internal_AF':fmt(internal),'Affected_Carriers':affected,
            'Unaffected_Carriers':integer(r['Unaffected_Carriers'],'Unaffected_Carriers'),
            'Affected_Families':integer(r['Affected_Families'],'Affected_Families'),
